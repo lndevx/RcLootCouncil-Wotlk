@@ -648,7 +648,9 @@ function RCLootCouncilML:AutoAward(lootIndex, item, quality, name, reason, boss)
 	end
 	if awarded then
 		addon:Print(format(L["Auto awarded 'item'"], item))
-		self:AnnounceAward(name, item, db.awardReasons[reason].text)
+		if db.autoAwardAnnounce then
+			self:AnnounceAward(name, item, db.awardReasons[reason].text)
+		end
 		self:TrackAndLogLoot(name, item, reason, boss, 0, nil, nil, db.awardReasons[reason])
 	else
 		addon:Print(L["Cannot autoaward:"])

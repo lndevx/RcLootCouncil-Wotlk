@@ -131,6 +131,7 @@ function RCLootCouncil:OnInitialize()
 			autoAwardUpperThreshold = 3,
 			autoAwardTo = L["None"],
 			autoAwardReason = 1,
+			autoAwardAnnounce = true,
 			observe = false, -- observe mode on/off
 			silentAutoPass = false, -- Show autopass message
 			--neverML = false, -- Never use the addon as ML

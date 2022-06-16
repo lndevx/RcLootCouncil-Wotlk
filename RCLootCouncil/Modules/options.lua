@@ -468,6 +468,13 @@ function addon:OptionsTable()
 											return t
 										end,
 									},
+									autoAwardAnnounce = {
+										order = 2.2,
+										name = L["Should Announce Auto Award"],
+										desc = L["auto_award_announce_desc"],
+										type = "toggle",
+										width = "full",
+									},
 								},
 							},
 							awardReasons = {
