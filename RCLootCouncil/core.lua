@@ -121,6 +121,7 @@ function RCLootCouncil:OnInitialize()
 			autoPass = true,
 			altClickLooting = true,
 			acceptWhispers = true,
+			acceptRaidChat = true,
 			selfVote = true,
 			multiVote = true,
 			anonymousVoting = false,
@@ -939,6 +940,9 @@ function RCLootCouncil:GetPlayersGear(link, equipLoc)
 			item1 = GetInventoryItemLink("player", GetInventorySlotInfo("TRINKET0SLOT"))
 			item2 = GetInventoryItemLink("player", GetInventorySlotInfo("TRINKET1SLOT"))
 		else	-- Just return the slot from the tokentable
+			if type(RCTokenTable[itemID]) == "table" then
+				return item1, item2
+			end
 			item1 = GetInventoryItemLink("player", GetInventorySlotInfo(RCTokenTable[itemID]))
 		end
 		return item1, item2

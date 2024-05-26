@@ -45,6 +45,8 @@ function RCLootCouncilML:OnEnable()
 	self:RegisterEvent("LOOT_CLOSED","OnEvent")
 	self:RegisterBucketEvent("RAID_ROSTER_UPDATE", 10, "UpdateGroup") -- Bursts in group creation, and we should have plenty of time to handle it
 	self:RegisterEvent("CHAT_MSG_WHISPER","OnEvent")
+	self:RegisterEvent("CHAT_MSG_RAID","OnEvent")
+	self:RegisterEvent("CHAT_MSG_RAID_LEADER","OnEvent")
 	self:RegisterBucketMessage("RCConfigTableChanged", 2, "ConfigTableChanged") -- The messages can burst
 end
 
@@ -395,6 +397,11 @@ function RCLootCouncilML:OnEvent(event, ...)
 		elseif self.running then
 			self:GetItemsFromMessage(msg, sender)
 		end
+	elseif (event == "CHAT_MSG_RAID" or event == "CHAT_MSG_RAID_LEADER") and addon.isMasterLooter and db.acceptRaidChat then
+		local msg, sender = ...
+		if self.running then
+			self:GetItemsFromMessage(msg, sender)
+		end
 	end
 end
 
@@ -736,36 +743,135 @@ function RCLootCouncilML:IsItemIgnored(link)
 	return tContains(db.ignore, itemID)
 end
 
+function RCLootCouncilML:ContainsItem(msg)
+	return msg:find("|Hitem:")
+end
+
+function RCLootCouncilML:ContainsResponse(msg)
+	if self:ContainsItem(msg) then
+		return false
+	end
+	if string.match(msg, "^%d/%d$") then
+		return false
+	end
+	local whisperKeys = {}
+	for i = 1, db.numButtons do --go through all the button
+		gsub(db.buttons[i]["whisperKey"], '[%w]+', function(x) tinsert(whisperKeys, {key = x, num = i}) end) -- extract the whisperKeys to a table
+	end
+	for _,v in ipairs(whisperKeys) do
+		if strmatch(string.lower(msg), string.lower(v.key)) then -- if we found a match
+			return v.num
+		end
+	end
+end
+
+function RCLootCouncilML:ParseNote(msg, args, positionOffset)
+	local notePart, nextPositionOffset = addon:GetArgs(msg, 1, positionOffset)
+	if notePart then
+		if not args.note then
+			args.note = notePart
+		else
+			args.note = args.note .. ' ' .. notePart
+		end
+		return self:ParseNote(msg, args, nextPositionOffset)
+	end
+	return true
+end
+
+function RCLootCouncilML:ParseItemsAndRest(msg, args, positionOffset)
+	local item1, nextPositionOffset = addon:GetArgs(msg, 1, positionOffset)
+	if item1 and self:ContainsItem(item1) then
+		args.item1 = item1
+		local item2, nextPositionOffset2 = addon:GetArgs(msg, 1, nextPositionOffset)
+		if item2 and self:ContainsItem(item2) then
+			nextPositionOffset = nextPositionOffset2
+			args.item2 = item2
+		end
+	else
+		nextPositionOffset = positionOffset
+	end
+
+	local id = addon:GetItemIDFromLink(self.lootTable[args.session].link)
+	local awardingMark = false
+	if id then
+		if RCTokenTable[id] then
+			awardingMark = true
+		end
+	end
+	if awardingMark then
+		local markStatus, nextPositionOffset3 = addon:GetArgs(msg, 1, nextPositionOffset)
+		if not markStatus then return false end
+		if string.match(markStatus, "^%d/%d$") then
+			args.note = markStatus
+			nextPositionOffset = nextPositionOffset3
+		else
+			return false
+		end
+	elseif not args.item1 then
+		return false
+	end
+	return self:ParseNote(msg, args, nextPositionOffset)
+end
+
+function RCLootCouncilML:ParseResponseAndRest(msg, args, positionOffset)
+	local resp, nextPositionOffset = addon:GetArgs(msg, 1, positionOffset)
+	if not resp then return false end
+	local response = self:ContainsResponse(resp)
+	if response then
+		args.response = response
+	else
+		args.response = 1
+		rest = msg
+		nextPositionOffset = positionOffset
+	end
+	return self:ParseItemsAndRest(rest, args, nextPositionOffset)
+end
+
+function RCLootCouncilML:ParseSessionAndRest(msg, args)
+	local positionOffset = 1
+	local ses, nextPositionOffset = addon:GetArgs(msg, 1, 1)
+	if not ses then return false end
+	local sesNumber = tonumber(ses)
+	if type(sesNumber) ~= "number" then
+		if #self.lootTable == 1 then
+			args.session = 1
+			rest = msg
+			nextPositionOffset = positionOffset
+		else
+			return false
+		end
+	elseif sesNumber > 0 and sesNumber <= #self.lootTable then
+		args.session = sesNumber
+	else
+		return false
+	end
+	return self:ParseResponseAndRest(rest, args, nextPositionOffset)
+end
+
 function RCLootCouncilML:GetItemsFromMessage(msg, sender)
 	addon:Debug("GetItemsFromMessage()", msg, sender)
 	if not addon.isMasterLooter then return end
 
-	local ses, arg1, arg2, arg3 = addon:GetArgs(msg, 4) -- We only require session to be correct, we can do some error checking on the rest
-	ses = tonumber(ses)
-	-- Let's test the input
-	if not ses or type(ses) ~= "number" or ses > #self.lootTable then return end -- We need a valid session
-	-- Set some locals
-	local item1, item2
-	local response = 1
-	if arg1:find("|Hitem:") then -- they didn't give a response
-		item1, item2 = arg1, arg2
-	else
-		-- No reason to continue if they didn't provide an item
-		if not arg2 or not arg2:find("|Hitem:") then return end
-		item1, item2 = arg2, arg3
-
-		-- check if the response is valid
-		local whisperKeys = {}
-		for i = 1, db.numButtons do --go through all the button
-			gsub(db.buttons[i]["whisperKey"], '[%w]+', function(x) tinsert(whisperKeys, {key = x, num = i}) end) -- extract the whisperKeys to a table
-		end
-		for _,v in ipairs(whisperKeys) do
-			if strmatch(arg1, v.key) then -- if we found a match
-				response = v.num
-				break;
-			end
+	local senderInRaid = false;
+	for i = 1, GetNumRaidMembers() do
+		if GetRaidRosterInfo(i) == sender then
+			senderInRaid = true
+			break
 		end
 	end
+	if not senderInRaid then
+		return
+	end
+
+	local args = {}
+	local res = self:ParseSessionAndRest(msg, args)
+	if not res then return end
+
+	-- Set some locals
+	local item1, item2 = args.item1, args.item2
+	local response = args.response
+	local ses = args.session
+	local note = args.note
 	local diff = 0
 	if item1 then diff = (self.lootTable[ses].ilvl - select(4, GetItemInfo(item1))) end
 	local toSend = {
@@ -773,7 +879,7 @@ function RCLootCouncilML:GetItemsFromMessage(msg, sender)
 		gear2 = item2,
 		ilvl = nil,
 		diff = diff,
-		note = nil,
+		note = note,
 		response = response
 	}
 	addon:SendCommand("group", "response", ses, sender, toSend)

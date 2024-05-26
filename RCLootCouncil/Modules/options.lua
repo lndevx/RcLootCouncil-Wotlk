@@ -674,11 +674,17 @@ function addon:OptionsTable()
 										desc = L["accept_whispers_desc"],
 										type = "toggle",
 									},
-									desc = {
+									acceptRaidChat = {
 										order = 2,
+										name = L["Accept Raid Chat"],
+										desc = L["accept_raid_chat_desc"],
+										type = "toggle",
+									},
+									desc = {
+										order = 3,
 										name = L["responses_from_chat_desc"],
 										type = "description",
-										hidden = function() return not self.db.profile.acceptWhispers end,
+										hidden = function() return not (self.db.profile.acceptWhispers or self.db.profile.acceptRaidChat) end,
 									},
 									-- Made further down
 								},
@@ -694,6 +700,7 @@ function addon:OptionsTable()
 									self.db.profile.responses = self.defaults.profile.responses
 									self.db.profile.numButtons = self.defaults.profile.numButtons
 									self.db.profile.acceptWhispers = self.defaults.profile.acceptWhispers
+									self.db.profile.acceptRaidChat = self.defaults.profile.acceptRaidChat
 									self:ConfigTableChanged()
 								end,
 							},
