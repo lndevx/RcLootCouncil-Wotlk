@@ -14,7 +14,7 @@ Supports most if not all 3.3.5 WoTLK servers.
 
 shows how considered item will change stats.
 
-![stats-diff](https://github.com/lndevx/RcLootCouncil-Wotlk/assets/166495101/6e6cd185-0790-4b10-8182-31d8552d45e4)
+![stats-diff](https://github.com/lndevx/RcLootCouncil-Wotlk/assets/166495101/bfb1b7a9-9a4c-47ba-9e4c-143069bf16ff)
 
 ## Integrated with [RaidAssist Backport](https://github.com/ajseward/RaidAssist_WotLK/) to display if an item is on your bislist or not when rolling. Works fine without it.
 
