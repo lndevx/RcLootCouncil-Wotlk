@@ -201,6 +201,15 @@ function addon:OptionsTable()
 										func = function() self.lootDB:ResetDB("") end,
 										confirm = true,
 									},
+									showForHistoryID = {
+										order = 6, 
+										name = "Response ID to check",
+										desc = "Checks for this response ID when looting and warns the council if the person has previously won this slot with this id",
+										type = "input",
+										pattern = "%d",
+										get = function() return self.db.profile.checkID end,
+										set = function(info, value) self.db.profile.checkID = value end,
+									}
 								},
 							},
 						},
@@ -446,9 +455,22 @@ function addon:OptionsTable()
 										style = "dropdown",
 										values = function()
 											local t = {}
-											for i = 1, addon:GetNumGroupMembers() do
-												local name = GetRaidRosterInfo(i)
-												t[name] = name
+											if addon:IsInRaid() then
+												for i = 1, addon:GetNumGroupMembers() do
+													local name = GetRaidRosterInfo(i)
+													if name then
+														t[name] = name
+													end
+												end
+											elseif addon:IsInGroup() then
+												for i = 1, MAX_PARTY_MEMBERS do
+													if GetPartyMember(i) then
+														local name = UnitName("party"..i)
+														if name then
+															t[name] = name
+														end
+													end
+												end
 											end
 											return t;
 										end,
@@ -791,9 +813,22 @@ function addon:OptionsTable()
 										width = "full",
 										values = function()
 											local t = {}
-											for i = 1, addon:GetNumGroupMembers() do
-												local name = select(1,GetRaidRosterInfo(i))
-												t[name] = name
+											if addon:IsInRaid() then
+												for i = 1, addon:GetNumGroupMembers() do
+													local name = GetRaidRosterInfo(i)
+													if name then
+														t[name] = name
+													end
+												end
+											elseif addon:IsInGroup() then
+												for i = 1, MAX_PARTY_MEMBERS do
+													if GetPartyMember(i) then
+														local name = UnitName("party"..i)
+														if name then
+															t[name] = name
+														end
+													end
+												end
 											end
 											if #t == 0 then t[self.playerName] = self.playerName end -- Insert ourself
 											table.sort(t, function(v1, v2)

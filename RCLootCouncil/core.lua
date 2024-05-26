@@ -111,6 +111,7 @@ function RCLootCouncil:OnInitialize()
 				never = false,			-- Never enable
 				state = "ask_ml", 	-- Current state
 			},
+			checkID = 1,
 			autoStart = false, -- start a session with all eligible items
 			autoLoot = true, -- Auto loot equippable items
 			autolootEverything = true,
@@ -1128,6 +1129,11 @@ function RCLootCouncil:CreateResponse(session, link, ilvl, response, equipLoc, n
 	end
 
 	local ilvl = GearScore_GetScore and GearScore_GetScore(UnitName("player"), "player") or 0
+	if ilvl == 0 then 
+		if GS_Data then 
+			ilvl = GS_Data[GetRealmName()].Players[UnitName("player")].GearScore or 0
+		end
+	end
 	return
 		session,
 		self.playerName,
@@ -1292,7 +1298,7 @@ end
 function RCLootCouncil:OnRaidEnter(arg)
 	-- NOTE: We shouldn't need to call GetML() as it's most likely called on "LOOT_METHOD_CHANGED"
 	-- There's no ML, and lootmethod ~= ML, but we are the group leader
-	if not self.masterLooter and UnitIsGroupLeader("player") then
+	if not self.masterLooter and (IsRaidLeader() or IsPartyLeader()) then
 		-- We don't need to ask the player for usage, so change loot method to master, and make the player ML
 		if db.usage.leader then
 			SetLootMethod("master", self.playerName)
@@ -1355,7 +1361,7 @@ function RCLootCouncil:Getdb()
 end
 
 function RCLootCouncil:GetHistoryDB()
-	if self.isMasterLooter or (not self:IsInGroup() and not IsInRaid()) then 
+	if self.isMasterLooter or (not self:IsInGroup() and not self:IsInRaid()) then 
 		return self.lootDB.factionrealm
 	else 
 		return self.mlhistory 
@@ -1363,7 +1369,7 @@ function RCLootCouncil:GetHistoryDB()
 end
 
 function RCLootCouncil:GetAnnounceChannel(channel)
-	return channel == "group" and (IsInRaid() and "RAID" or "PARTY") or channel
+	return channel == "group" and (self:IsInRaid() and "RAID" or "PARTY") or channel
 end
 
 function RCLootCouncil:GetItemIDFromLink(link)
