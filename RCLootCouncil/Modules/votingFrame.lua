@@ -774,7 +774,34 @@ function RCVotingFrame.SetCellGear(rowFrame, frame, data, cols, row, realrow, co
 	if gear then
 		local texture = select(10, GetItemInfo(gear))
 		frame:SetNormalTexture(texture)
-		frame:SetScript("OnEnter", function() addon:CreateHypertip(gear) end)
+		frame:SetScript("OnEnter", function()
+			GameTooltip:AddLine(' ')
+			local stats1 = GetItemStats(gear)
+			local stats2 = GetItemStats(lootTable[session].link)
+			local diff = {}
+			local lines = 1
+			for k, v in pairs(stats2) do
+				diff[k] = v - (stats1[k] or 0)
+			end
+			for k, v in pairs(stats1) do
+				diff[k] = (stats2[k] or 0) - v
+			end
+			addon:CreateHypertip(gear)
+			local h = GameTooltip:GetHeight()
+			for k, v in pairs(diff) do
+				if v > 0 then
+					lines = lines + 1
+					GameTooltip:AddLine('|cAA00FF00'..'+'..v..'|r '..(_G[k] or 'unknown stat'))
+				end	
+			end
+			for k, v in pairs(diff) do
+				if v < 0 then
+					lines = lines + 1
+					GameTooltip:AddLine('|cAAFF0000'..v..'|r '..(_G[k] or 'unknown stat'))
+				end
+			end
+			GameTooltip:SetHeight(h + lines * 15)
+		end)
 		frame:SetScript("OnLeave", function() addon:HideTooltip() end)
 		frame:Show()
 	else
