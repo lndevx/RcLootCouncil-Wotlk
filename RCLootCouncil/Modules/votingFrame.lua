@@ -1122,8 +1122,12 @@ do
 			Lib_UIDropDownMenu_AddButton(info, level)
 			info = Lib_UIDropDownMenu_CreateInfo()
 
+			function infoPrefix(filter)
+				return db.modules["RCVotingFrame"].filters[filter] and '[x] ' or '[ ] '
+			end
+
 			for k in ipairs(data) do -- Make sure normal responses are on top
-				info.text = addon:GetResponseText(k)
+				info.text = infoPrefix(k) .. addon:GetResponseText(k)
 				info.colorCode = "|cff"..addon:RGBToHex(addon:GetResponseColor(k))
 				info.func = function()
 					addon:Debug("Update Filter")
@@ -1136,10 +1140,10 @@ do
 			for k in pairs(data) do -- A bit redundency, but it makes sure these "specials" comes last
 				if type(k) == "string" then
 					if k == "STATUS" then
-						info.text = L["Status texts"]
+						info.text = infoPrefix(k) .. L["Status texts"]
 						info.colorCode = "|cffde34e2" -- purpleish
 					else
-						info.text = addon:GetResponseText(k)
+						info.text = infoPrefix(k) .. addon:GetResponseText(k)
 						info.colorCode = "|cff"..addon:RGBToHex(addon:GetResponseColor(k))
 					end
 					info.func = function()
